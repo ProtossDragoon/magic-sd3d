@@ -49,13 +49,15 @@ system:
     pretrained_model_name_or_path: "stabilityai/stable-diffusion-2-1-base"
     prompt: ???
 
-  guidance_type: "stable-diffusion-guidance"
+  guidance_type: "stable-diffusion-triple-guidance"
   guidance:
     pretrained_model_name_or_path: "stabilityai/stable-diffusion-2-1-base"
-    weighting_strategy: sds
-    guidance_scale: 100.
     min_step_percent: 0.02
     max_step_percent: 0.5
+    cond_scale: 1.
+    uncond_scale: [0, -1, -0.5, 10000]
+    null_scale: [0, 0, -0.5, 10000]
+    noise_scale: 0.
 
   loggers:
     wandb:

@@ -50,13 +50,17 @@ system:
     pretrained_model_name_or_path: "DeepFloyd/IF-I-XL-v1.0"
     prompt: ???
 
-  guidance_type: "deep-floyd-guidance"
+  guidance_type: "deep-floyd-simple-guidance"
   guidance:
     pretrained_model_name_or_path: "DeepFloyd/IF-I-XL-v1.0"
     weighting_strategy: uniform
-    guidance_scale: 20.
     min_step_percent: 0.02
-    max_step_percent: 0.98
+    max_step_percent: [5000, 0.98, 0.5, 5001]
+    cond_scale: 1.0
+    uncond_scale: [0, -0.0, -1, 5000]
+    null_scale: [0, -1, 0.0, 5000]
+    noise_scale: 0.
+    perpneg_scale: 3.
 
   loggers:
     wandb:
