@@ -8,4 +8,6 @@ from . import (
     stable_zero123_guidance,
     zero123_guidance,
     zero123_unified_guidance,
+    deep_floyd_simple_guidance,
+    stable_diffusion_triple_guidance,
 )
