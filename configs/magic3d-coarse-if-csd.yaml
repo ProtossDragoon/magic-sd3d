@@ -1,4 +1,4 @@
-name: "magic3d-coarse-if"
+name: "magic3d-coarse-if-csd"
 tag: "${rmspace:${system.prompt_processor.prompt},_}"
 exp_root_dir: "outputs"
 seed: 0

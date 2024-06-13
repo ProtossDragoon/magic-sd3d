@@ -1,4 +1,4 @@
-name: "magic3d-refine-sd"
+name: "magic3d-refine-sd-csd"
 tag: "${rmspace:${system.prompt_processor.prompt},_}"
 exp_root_dir: "outputs"
 seed: 0
