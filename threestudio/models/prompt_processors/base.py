@@ -38,6 +38,7 @@ class DirectionConfig:
 class PromptProcessorOutput:
     text_embeddings: Float[Tensor, "N Nf"]
     uncond_text_embeddings: Float[Tensor, "N Nf"]
+    null_text_embeddings: Float[Tensor, "N Nf"]
     text_embeddings_vd: Float[Tensor, "Nv N Nf"]
     uncond_text_embeddings_vd: Float[Tensor, "Nv N Nf"]
     directions: List[DirectionConfig]
@@ -56,6 +57,7 @@ class PromptProcessorOutput:
         azimuth: Float[Tensor, "B"],
         camera_distances: Float[Tensor, "B"],
         view_dependent_prompting: bool = True,
+        return_null_text_embeddings: bool = False,
     ) -> Float[Tensor, "BB N Nf"]:
         batch_size = elevation.shape[0]
 
@@ -76,8 +78,16 @@ class PromptProcessorOutput:
                 batch_size, -1, -1
             )
 
+        # NOTE: suggested by Classifier Score Distillation
+        null_text_embeddings = self.null_text_embeddings.expand(batch_size, -1, -1)  # type: ignore
+
         # IMPORTANT: we return (cond, uncond), which is in different order than other implementations!
-        return torch.cat([text_embeddings, uncond_text_embeddings], dim=0)
+        if return_null_text_embeddings:
+            return torch.cat(
+                [text_embeddings, uncond_text_embeddings, null_text_embeddings], dim=0
+            )
+        else:
+            return torch.cat([text_embeddings, uncond_text_embeddings], dim=0)
 
     def get_text_embeddings_perp_neg(
         self,
@@ -85,6 +95,7 @@ class PromptProcessorOutput:
         azimuth: Float[Tensor, "B"],
         camera_distances: Float[Tensor, "B"],
         view_dependent_prompting: bool = True,
+        return_null_text_embeddings: bool = False,
     ) -> Tuple[Float[Tensor, "BBBB N Nf"], Float[Tensor, "B 2"]]:
         assert (
             view_dependent_prompting
@@ -153,14 +164,26 @@ class PromptProcessorOutput:
                         -shifted_expotional_decay(*self.perp_neg_f_fsb, r_inter),
                     ]
 
-        text_embeddings = torch.cat(
-            [
-                torch.stack(pos_text_embeddings, dim=0),
-                torch.stack(uncond_text_embeddings, dim=0),
-                torch.stack(neg_text_embeddings, dim=0),
-            ],
-            dim=0,
-        )
+        if return_null_text_embeddings:
+            # NOTE: suggested by Classifier Score Distillation
+            text_embeddings = torch.cat(
+                [
+                    torch.stack(pos_text_embeddings, dim=0),
+                    torch.stack(uncond_text_embeddings, dim=0),
+                    torch.stack(neg_text_embeddings, dim=0),
+                    self.null_text_embeddings.expand(batch_size, -1, -1),
+                ],
+                dim=0,
+            )
+        else:
+            text_embeddings = torch.cat(
+                [
+                    torch.stack(pos_text_embeddings, dim=0),
+                    torch.stack(uncond_text_embeddings, dim=0),
+                    torch.stack(neg_text_embeddings, dim=0),
+                ],
+                dim=0,
+            )
 
         return text_embeddings, torch.as_tensor(
             neg_guidance_weights, device=elevation.device
@@ -406,6 +429,8 @@ class PromptProcessor(BaseObject):
         self.uncond_text_embeddings_vd = torch.stack(
             [self.load_from_cache(prompt) for prompt in self.negative_prompts_vd], dim=0
         )
+        # NOTE: suggested by Classifier Score Distillation
+        self.null_text_embeddings = self.load_from_cache("")[None, ...]
         threestudio.debug(f"Loaded text embeddings.")
 
     def load_from_cache(self, prompt):
@@ -509,6 +534,7 @@ class PromptProcessor(BaseObject):
         return PromptProcessorOutput(
             text_embeddings=self.text_embeddings,
             uncond_text_embeddings=self.uncond_text_embeddings,
+            null_text_embeddings=self.null_text_embeddings,
             prompt=self.prompt,
             text_embeddings_vd=self.text_embeddings_vd,
             uncond_text_embeddings_vd=self.uncond_text_embeddings_vd,
