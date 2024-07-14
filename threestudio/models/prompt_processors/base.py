@@ -78,11 +78,10 @@ class PromptProcessorOutput:
                 batch_size, -1, -1
             )
 
-        # NOTE: suggested by Classifier Score Distillation
-        null_text_embeddings = self.null_text_embeddings.expand(batch_size, -1, -1)  # type: ignore
-
         # IMPORTANT: we return (cond, uncond), which is in different order than other implementations!
         if return_null_text_embeddings:
+            # NOTE: suggested by Classifier Score Distillation
+            null_text_embeddings = self.null_text_embeddings.expand(batch_size, -1, -1)  # type: ignore
             return torch.cat(
                 [text_embeddings, uncond_text_embeddings, null_text_embeddings], dim=0
             )
